@@ -162,6 +162,12 @@ button:active {
   align-items: flex-end;
 }
 
+.no-rating {
+  font-style: italic;
+  font-size: 0.7em;
+  color: #999;
+}
+
 .book-shelf-changer {
   position: absolute;
   right: 0;
@@ -196,3 +202,5 @@ button:active {
   text-align: center;
   font-size: 0.8em;
 }
+
+
