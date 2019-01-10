@@ -3,34 +3,34 @@ import * as BooksAPI from './BooksAPI';
 import './App.css';
 import BookWrapper from './BookWrapper.js';
 import ListSearchBooks from './ListSearchBooks.js';
-import { Route } from 'react-router-dom';
-import {Link } from 'react-router-dom';
+import { Route, Link } from 'react-router-dom';
 
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faStar } from '@fortawesome/free-solid-svg-icons'
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faStar } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faStar)
+library.add(faStar);
 
 
 class BooksApp extends Component {
+
   constructor(props) {
     super(props);
     this.state = {
-      /**
-       * TODO: Instead of using this state variable to keep track of which page
-       * we're on, use the URL in the browser's address bar. This will ensure that
-       * users can use the browser's back and forward buttons to navigate between
-       * pages, as well as provide a good URL they can bookmark and share.
-       */
       books: [],
+      searchResults: [],
+      searchLoaded: false,
       query: '',
-      showSearchPage: false,
     };
+
     this.updateState = this.updateState.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.updateQuery = this.updateQuery.bind(this);
+    this.handleNewSearch = this.handleNewSearch.bind(this);
   }
 
+  /**
+  * @description API call for books
+  */
   componentDidMount() {
     BooksAPI.getAll()
       .then((books) => {
@@ -40,35 +40,96 @@ class BooksApp extends Component {
       })
   }
 
-  /**
-  * functions for book shelf changes
-  */
 
+  // Functions for book shelf changes
+
+  /**
+  * @description Update state for books
+  */
   updateState (booklist) {
     this.setState({books: booklist});
   }
 
-  handleChange (newshelf, id, prevBooks) {
-    const updatedBooks = prevBooks.map(book => {
-      if(book.id !== id) return book;
 
-      book.shelf = newshelf;
-      BooksAPI.update(book, newshelf);
-      return book;
-    });
-    
-    this.updateState(updatedBooks);   
+  /**
+  * @description Update book with new shelf
+  * @param {string} newshelf - The new shelf for the book
+  * @param {string} id - The book's id
+  * @param {array} prevBooks - array of books to update
+  */
+  handleChange (selected, newshelf, id, prevBooks) {
+    let updatedBooks = '';
+
+    //if newshelf equals none
+    //for a book currently assigned a shelf and to be evnetually removed from this.state.books
+    if (newshelf === 'none') {
+      selected.shelf = newshelf;
+      updatedBooks = prevBooks.filter((pbook) => (
+        pbook.id !== id
+      ))
+
+      this.updateState(updatedBooks);
+    }
+
+    //if no shelf property exists yet on the selected book
+    //for a book selected from the search page and to be eventually added to this.state.books
+    if (!selected.shelf) {
+      selected.shelf = newshelf;
+      prevBooks.push(selected);
+      this.updateState(prevBooks);
+    }
+
+    //if the newshelf is not none, and the selected book has a shelf
+    //for a book currently assigned a shelf
+    if ((selected.shelf && selected.shelf !=='none') && newshelf !== 'none') {
+      updatedBooks = prevBooks.map((pbook) => {
+
+        if(pbook.id !== id) return pbook;
+
+        if(pbook.id === id) {
+          pbook.shelf = newshelf;
+        }
+        return pbook;
+      });
+
+      this.updateState(updatedBooks);
+      BooksAPI.update(selected, newshelf);
+
+    }
+  }
+
+
+
+  // Functions for search
+
+  /**
+  * @description Fires search for BooksAPI adn returns result
+  * @param {string} query - search input content
+  */
+  handleNewSearch (query) {
+    if (query) {
+      BooksAPI.search(query.trim())
+     .then((data) => {
+
+        this.setState({
+          searchResults: data,
+          searchLoaded: true
+        })
+
+    })}
   }
 
 
   /**
-  * functions for search
+  * @description Update state for search query
+  * @param {string} query - search input content
   */
-
   updateQuery (query) {
     this.setState(() => ({
-      query: query.trim(),
+      query: query,
+      searchLoaded: false
     }))
+    this.handleNewSearch(query);
   }
 
 
@@ -76,31 +137,29 @@ class BooksApp extends Component {
   render() {
     return (
       <div className="app">
-
-        {this.state.showSearchPage ? (
-          <div>
-            <Route exact path='/search' render={() => (
+            <Route path='/search' render={() => (
               <div className="search-books">
                 <div className="search-books-bar">
                   <Link to='/'>
-                  <button className="close-search" onClick={() => this.setState({ showSearchPage: false })}>Close</button>
+                    <button className="close-search">Close</button>
                   </Link>
                   <div className="search-books-input-wrapper">
-                    <input 
+                    <input
                       type="text"
                       placeholder="Search by title or author"
                       value={this.state.query}
                       onChange={(event) => this.updateQuery(event.target.value)}
                     />
-                  </div> 
+                  </div>
                 </div>
-                <ListSearchBooks books={this.state.books} query={this.state.query} handleChange={this.handleChange} />
+                {(this.state.searchLoaded) &&
+                  <ListSearchBooks shelvedBooks={this.state.books} books={this.state.searchResults} query={this.state.query} handleChange={this.handleChange} />
+                }
               </div>
             )} />
-          </div>
-        ) : (
-          <div>
-            <Route path='/' render={() => (
+
+
+            <Route exact path='/' render={() => (
               <div className="list-books">
                 <div className="list-books-title">
                   <h1>MyReads</h1>
@@ -123,15 +182,13 @@ class BooksApp extends Component {
                 </div>
                 <div className="open-search">
                   <Link to="/search">
-                  <button onClick={() => this.setState({ showSearchPage: true })}>Add a book</button>
+                    <button>Add a book</button>
                   </Link>
                 </div>
               </div>
             )} />
-          </div>
-        )}
       </div>
-    )
+    );
   }
 }
 

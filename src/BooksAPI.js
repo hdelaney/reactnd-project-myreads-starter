@@ -40,7 +40,7 @@ export const updateRating = (book, rating) =>
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ rating })
-  }).then(res => res.json())  
+  }).then(res => res.json())
 
 export const search = (query) =>
   fetch(`${api}/search`, {
